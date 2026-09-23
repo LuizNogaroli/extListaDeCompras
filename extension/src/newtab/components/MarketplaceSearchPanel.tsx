@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Product } from "../types";
 import { generateMockSuggestions, type MarketplaceSuggestion } from "../mock/marketplaceSuggestions";
+import { formatCurrency } from "../format";
 
 type SortOption = "relevancia" | "menor-preco" | "maior-preco" | "avaliacao";
 
@@ -17,8 +18,6 @@ const DEFAULT_FILTERS: FilterState = {
 };
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20];
-
-const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 function sortSuggestions(items: MarketplaceSuggestion[], sort: SortOption) {
   const sorted = [...items];
@@ -166,7 +165,7 @@ export function MarketplaceSearchPanel({ product, isSearching }: MarketplaceSear
                       )}
                     </div>
                     <div className="search-result-price-col">
-                      <span className="search-result-price">{currency.format(suggestion.price)}</span>
+                      <span className="search-result-price">{formatCurrency(suggestion.price)}</span>
                       <button
                         type="button"
                         className="ghost"

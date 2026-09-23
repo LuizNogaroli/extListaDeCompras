@@ -44,7 +44,7 @@ export async function createProduct(req: Request, res: Response) {
 
 export async function updateProduct(req: Request, res: Response) {
   const { id } = req.params;
-  const { name, description, estimatedPrice, categoryId, purchased } = req.body;
+  const { name, description, estimatedPrice, categoryId, purchased, suppliers } = req.body;
 
   const product = await prisma.product.update({
     where: { id },
@@ -54,6 +54,20 @@ export async function updateProduct(req: Request, res: Response) {
       ...(estimatedPrice !== undefined && { estimatedPrice }),
       ...(categoryId !== undefined && { categoryId }),
       ...(purchased !== undefined && { purchased }),
+      // O formulário de edição sempre reenvia a lista completa de fornecedores (sem ids,
+      // já que o form só trabalha com nome/url/preço/notas) — por isso substituímos tudo
+      // em vez de tentar casar registros existentes.
+      ...(Array.isArray(suppliers) && {
+        suppliers: {
+          deleteMany: {},
+          create: suppliers.map((s: { name: string; url?: string; price?: number; notes?: string }) => ({
+            name: s.name,
+            url: s.url ?? null,
+            price: s.price ?? null,
+            notes: s.notes ?? null,
+          })),
+        },
+      }),
     },
     include: productInclude,
   });

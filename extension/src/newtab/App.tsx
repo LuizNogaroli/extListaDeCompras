@@ -4,7 +4,42 @@ import type { Category, Product, ProductInput } from "./types";
 import { ProductList } from "./components/ProductList";
 import { ProductForm } from "./components/ProductForm";
 import { CategoryManager } from "./components/CategoryManager";
+import { formatCurrency } from "./format";
+import { getNotificationPermission, requestNotificationPermission, notify, type NotificationSupport } from "./notifications";
 import "./App.css";
+
+function diffAndNotify(previous: Product | null, input: ProductInput, productName: string) {
+  if (!previous) {
+    for (const supplier of input.suppliers ?? []) {
+      notify("Novo fornecedor", `${productName}: fornecedor "${supplier.name}" foi cadastrado.`);
+    }
+    return;
+  }
+
+  if (
+    input.estimatedPrice != null &&
+    previous.estimatedPrice != null &&
+    input.estimatedPrice !== previous.estimatedPrice
+  ) {
+    notify(
+      "Preço atualizado",
+      `${productName}: preço estimado mudou de ${formatCurrency(previous.estimatedPrice)} para ${formatCurrency(input.estimatedPrice)}.`
+    );
+  }
+
+  const previousSuppliers = new Map(previous.suppliers.map((s) => [s.name, s]));
+  for (const supplier of input.suppliers ?? []) {
+    const before = previousSuppliers.get(supplier.name);
+    if (!before) {
+      notify("Novo fornecedor", `${productName}: fornecedor "${supplier.name}" foi adicionado.`);
+    } else if (supplier.price != null && before.price != null && supplier.price !== before.price) {
+      notify(
+        "Preço de fornecedor atualizado",
+        `${productName} — ${supplier.name}: preço mudou de ${formatCurrency(before.price)} para ${formatCurrency(supplier.price)}.`
+      );
+    }
+  }
+}
 
 export function App() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -18,6 +53,15 @@ export function App() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isFormOpen, setFormOpen] = useState(false);
   const [isCategoryManagerOpen, setCategoryManagerOpen] = useState(false);
+
+  const [notificationPermission, setNotificationPermission] = useState<NotificationSupport>(() =>
+    getNotificationPermission()
+  );
+
+  async function handleEnableNotifications() {
+    const permission = await requestNotificationPermission();
+    setNotificationPermission(permission);
+  }
 
   // Itens recém-criados nesta sessão que ainda estão "sendo pesquisados" (simulação —
   // não existe busca real por marketplaces ainda, ver docs/roadmap.md).
@@ -75,6 +119,7 @@ export function App() {
   }
 
   async function handleFormSubmit(input: ProductInput) {
+    diffAndNotify(editingProduct, input, input.name);
     if (editingProduct) {
       await api.products.update(editingProduct.id, input);
     } else {
@@ -118,6 +163,24 @@ export function App() {
       <header className="app-header">
         <h1>🛒 Lista de Compras</h1>
         <div className="header-actions">
+          {notificationPermission !== "unsupported" && (
+            <button
+              className="secondary"
+              onClick={handleEnableNotifications}
+              disabled={notificationPermission !== "default"}
+              title={
+                notificationPermission === "denied"
+                  ? "Bloqueado nas permissões do navegador — habilite manualmente para receber alertas"
+                  : undefined
+              }
+            >
+              {notificationPermission === "granted"
+                ? "🔔 Notificações ativas"
+                : notificationPermission === "denied"
+                  ? "🔕 Notificações bloqueadas"
+                  : "🔔 Ativar notificações"}
+            </button>
+          )}
           <button className="secondary" onClick={() => setCategoryManagerOpen(true)}>
             Categorias
           </button>

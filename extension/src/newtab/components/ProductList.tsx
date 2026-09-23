@@ -1,5 +1,6 @@
 import type { Product } from "../types";
 import { MarketplaceSearchPanel } from "./MarketplaceSearchPanel";
+import { formatCurrency } from "../format";
 
 interface ProductListProps {
   products: Product[];
@@ -8,8 +9,6 @@ interface ProductListProps {
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
 }
-
-const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export function ProductList({ products, searchingIds, onTogglePurchased, onEdit, onDelete }: ProductListProps) {
   if (products.length === 0) {
@@ -44,7 +43,7 @@ export function ProductList({ products, searchingIds, onTogglePurchased, onEdit,
                       <div className="product-title-row">
                         <span className="product-name">{product.name}</span>
                         {product.estimatedPrice != null && (
-                          <span className="product-price">{currency.format(product.estimatedPrice)}</span>
+                          <span className="product-price">{formatCurrency(product.estimatedPrice)}</span>
                         )}
                       </div>
                       {product.description && <p className="product-description">{product.description}</p>}
@@ -59,7 +58,7 @@ export function ProductList({ products, searchingIds, onTogglePurchased, onEdit,
                               ) : (
                                 s.name
                               )}
-                              {s.price != null && <span> · {currency.format(s.price)}</span>}
+                              {s.price != null && <span> · {formatCurrency(s.price)}</span>}
                             </li>
                           ))}
                         </ul>
